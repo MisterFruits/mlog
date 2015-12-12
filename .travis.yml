@@ -1,0 +1,26 @@
+sudo: false
+notifications:
+  email: false
+  webhook: "https://smsapi.free-mobile.fr/sendmsg?user=10194111&pass=GC2q9I0YpfpbfK&msg=Tabt+build+finished"
+
+language: python
+python:
+  - "3.4"
+  - "2.7"
+cache:
+  pip
+
+branches:
+  only:
+    - master
+    - develop
+
+before_install:
+  - pip install -U pip
+  - pip install coveralls
+install:
+  - pip install --pre -r requirements.txt
+script:
+  - coverage run -m py.test
+after_success:
+  - coveralls
