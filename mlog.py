@@ -1,6 +1,7 @@
+# coding: utf8
 import nvd3
 import argparse
-import re, logging
+import re, logging, hashlib
 from collections import defaultdict
 
 WRONG_FORMAT_WARNING = "log '{}' does not match provided regex: '{}'"
@@ -25,7 +26,7 @@ def main():
         print(p.uids)
 
 class Log(object):
-    """docstring for Log"""
+    """A line of log container"""
     def __init__(self, module, version, date, uid):
         super(Log, self).__init__()
         self.module = module
@@ -35,7 +36,7 @@ class Log(object):
 
 
 class Parser(object):
-    """docstring for Parser"""
+    """An interface between log file and data internal representation"""
     def __init__(self, lines, format):
         super(Parser, self).__init__()
         self.lines = lines
@@ -54,9 +55,12 @@ class Parser(object):
     def _parse_line(self, line):
         m = self.format.match(line)
         if m:
-            return Log(m.group('module'), m.group('version'), m.group('date'), m.group('uid'))
+            return Log(m.group('module'), m.group('version'), m.group('date'), hashlib.sha1(m.group('uid').encode()))
         else:
             raise SyntaxError(WRONG_FORMAT_WARNING.format(line, self.format.pattern))
+
+    def parse(self):
+        return [log for log in self.filter(self.lines)]
 
     def filter(self, lines):
         for line in lines:
@@ -69,3 +73,4 @@ class Parser(object):
 
 if __name__ == '__main__':
     main()
+
