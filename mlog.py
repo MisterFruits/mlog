@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # coding: utf8
 import nvd3
 import argparse
@@ -22,8 +23,9 @@ def main():
     args = parser.parse_args()
     with open(args.logfile) as loglines:
         p = Parser(loglines, args.format)
-        print(p.modules)
-        print(p.uids)
+        modules, uids = p.extract_infos()
+        print(modules)
+        print(uids)
 
 class Log(object):
     """A line of log container"""
@@ -41,9 +43,8 @@ class Parser(object):
         super(Parser, self).__init__()
         self.lines = lines
         self.format = re.compile(format)
-        self.modules, self.uids = self._extract_infos()
 
-    def _extract_infos(self):
+    def extract_infos(self):
         modules = defaultdict(set)
         uids = set()
         for log in self.filter(self.lines):
