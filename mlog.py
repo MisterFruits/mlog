@@ -49,13 +49,14 @@ class Parser(object):
     def extract_infos(self):
         modules = defaultdict(set)
         uids = set()
-        for log in self.filter(self.lines):
+        for log in self.logs:
             uids.add(log.uid)
             modules[log.module].add(log.version)
 
         return modules, uids
 
     def _parse_line(self, line):
+        """ Main  parsing function"""
         m = self.format.match(line)
         if m:
             date =  m.group('date')
@@ -66,15 +67,17 @@ class Parser(object):
         else:
             raise SyntaxError(WRONG_FORMAT_WARNING.format(line, self.format.pattern))
 
-    def parse(self):
-        return [log for log in self.filter(self.lines)]
+    @property
+    def logs(self):
+        return self._filter(self.lines)
 
-    def filter(self, lines):
+
+    def _filter(self, lines):
         for line in lines:
             try:
                 yield self._parse_line(line)
             except SyntaxError as e:
-                logging.debug(e.msg)
+                logging.warning(e.msg)
 
 
 
