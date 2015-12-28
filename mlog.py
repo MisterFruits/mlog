@@ -2,6 +2,7 @@
 # coding: utf8
 import nvd3
 import argparse
+import dateutil.parser
 import re, logging, hashlib
 from collections import defaultdict
 
@@ -43,6 +44,7 @@ class Parser(object):
         super(Parser, self).__init__()
         self.lines = lines
         self.format = re.compile(format)
+        self.date_format = None
 
     def extract_infos(self):
         modules = defaultdict(set)
@@ -56,7 +58,11 @@ class Parser(object):
     def _parse_line(self, line):
         m = self.format.match(line)
         if m:
-            return Log(m.group('module'), m.group('version'), m.group('date'), hashlib.sha1(m.group('uid').encode()))
+            date =  m.group('date')
+            if self.date_format:
+                date = dateutil.parser.parse(date)
+
+            return Log(m.group('module'), m.group('version'), date, hashlib.sha1(m.group('uid').encode()).hexdigest())
         else:
             raise SyntaxError(WRONG_FORMAT_WARNING.format(line, self.format.pattern))
 

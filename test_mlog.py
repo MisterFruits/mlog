@@ -1,5 +1,6 @@
 import mlog, random, math, time, datetime
 from nvd3 import stackedAreaChart, pieChart, multiBarChart
+import dateutil.parser
 
 def test_LogParser_parse():
     test_case = ['2008-09-03 gra45 nc_app3 3.4.5',
@@ -24,6 +25,30 @@ def test_LogParser_parse():
     assert logs[0].version == '3.4.5'
     assert logs[1].version == '6.5'
     assert logs[2].version == '6.4.5'
+
+
+def test_LogParser_parse_date():
+    test_case = ['2008-09-03 gra45 nc_app3 3.4.5',
+                 '2014-12-29 toto4 nc_app2 6.5',
+                 '2015-09-14 toto4 nc_app3 6.4.5']
+    parser = mlog.Parser(test_case, r'(?P<date>\S+) (?P<uid>\S+) (?P<module>\S+) (?P<version>\S+)')
+    parser.date_format = True
+    logs = parser.parse()
+    assert logs[0].date.year == 2008
+    assert logs[1].date.year == 2014
+    assert logs[2].date.year == 2015
+
+
+def test_parse_date():
+    test_date = '20151215 16:13:34'
+    date = dateutil.parser.parse(test_date)
+    assert date.year == 2015
+    assert date.month == 12
+    assert date.day == 15
+    assert date.hour == 16
+    assert date.minute == 13
+    assert date.second == 34
+
 
 def test_vincent():
     cats = ['y1', 'y2', 'y3', 'y4']
