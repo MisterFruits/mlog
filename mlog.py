@@ -20,13 +20,22 @@ def main():
                         help='filter logs, dont consider logs before this date')
     parser.add_argument('-E', '--end-time',
                         help='filter logs, dont consider logs after this date')
+    parser.add_argument('-v', '--verbose', action='count',
+                        help='verbose mode')
 
     args = parser.parse_args()
+    logging.setLevel([logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][args.verbose])
+
     with open(args.logfile) as loglines:
         p = Parser(loglines, args.format)
-        modules, uids = p.extract_infos()
-        print(modules)
-        print(uids)
+        p.modules_filter.add('python')
+        # modules, uids = p.extract_infos()
+        # print(modules)
+        # print(uids)
+
+
+
+
 
 class Log(object):
     """A line of log container"""
@@ -46,6 +55,11 @@ class Parser(object):
         self.format = re.compile(format)
         self.date_format = None
 
+        # Filtering stuff
+        self.modules_filter = set()
+        self.uids_filter = set()
+
+
     def extract_infos(self):
         modules = defaultdict(set)
         uids = set()
@@ -56,7 +70,7 @@ class Parser(object):
         return modules, uids
 
     def _parse_line(self, line):
-        """ Main  parsing function"""
+        """Main  parsing function"""
         m = self.format.match(line)
         if m:
             date =  m.group('date')
@@ -75,9 +89,30 @@ class Parser(object):
     def _filter(self, lines):
         for line in lines:
             try:
-                yield self._parse_line(line)
+                log = self._parse_line(line)
+                if self._keep(log):
+                    yield log
             except SyntaxError as e:
                 logging.warning(e.msg)
+
+    def _keep(self, log):
+        if self.modules_filter and log.module not in self.modules_filter:
+            return False
+        if self.uids_filter and log.uid not in self.uids_filter:
+            return False
+        return True
+
+    def key(self, log):
+        return self._month_key(log)
+
+    def _month_key(self, log):
+        """Provides a key based on the month, this concept of  key must be enforced"""
+        key = log.date()
+        key.day = 1
+        return key
+
+    def _month_label_formater(self):
+        return '%d %b %Y'
 
 
 
