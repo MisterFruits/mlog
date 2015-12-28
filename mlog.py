@@ -62,7 +62,7 @@ class Parser(object):
             if self.date_format:
                 date = dateutil.parser.parse(date)
 
-            return Log(m.group('module'), m.group('version'), date, hashlib.sha1(m.group('uid').encode()).hexdigest())
+            return Log(m.group('module'), m.group('version'), date, hashlib.sha1(m.group('uid').encode()).hexdigest()[:5])
         else:
             raise SyntaxError(WRONG_FORMAT_WARNING.format(line, self.format.pattern))
 
