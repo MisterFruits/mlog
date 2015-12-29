@@ -2,9 +2,12 @@
 # coding: utf8
 import nvd3
 import argparse
-import dateutil.parser
+import dateutil.parser, time
 import re, logging, hashlib
-from collections import defaultdict
+from collections import defaultdict, Counter
+from pprint import pprint as pp
+from nvd3 import stackedAreaChart, pieChart, multiBarChart
+
 
 WRONG_FORMAT_WARNING = "log '{}' does not match provided regex: '{}'"
 LOGGER = logging.getLogger(__name__)
@@ -29,14 +32,42 @@ def main():
 
     with open(args.logfile) as loglines:
         p = Parser(loglines, args.format)
-        p.modules_filter.add('python')
-        # modules, uids = p.extract_infos()
-        # print(modules)
-        # print(uids)
+        p.date_format = True
+        p.modules_filter.add('intel')
+        data = defaultdict(Counter)
+        for log in p.logs:
+            category = 'Module {}, version {}'.format(log.module, log.version)
+            data[category].update([p.key(log)])
+        stacked_chart(data)
+
+def stacked_chart(datas):
+    pp(datas)
+    x_values = set()
+    for key in datas:
+        x_values.update(datas[key].keys())
+    pp(x_values)
+    xx_values = [int(time.mktime(date.timetuple()) * 1000) for date in x_values]
+
+    type = "stackedAreaChart"
+
+    chart = stackedAreaChart(name=type, height=400, width=1000, x_is_date=True)
+    chart.set_containerheader("\n\n<h2>" + type + "</h2>\n\n")
 
 
+    tooltip_date = "%b %Y"
 
+    for category, data in datas.items():
+        extra_serie = {"tooltip": {"y_start": "There were ", "y_end": " {} moduel loaded".format(category)},
+                       "date_format": tooltip_date}
+        chart.add_serie(name=category, y=[data[key] for key in x_values], x=xx_values, extra=extra_serie)
 
+    chart.buildhtml()
+
+    write(chart, "date_from_log")
+
+def write(chart, filename):
+     with open(filename + '.html', 'w') as output_file:
+        output_file.write(chart.htmlcontent)
 
 class Log(object):
     """A line of log container"""
@@ -92,7 +123,7 @@ class Parser(object):
                 if self._keep(log):
                     yield log
             except SyntaxError as e:
-                LOGGER.info(e.msg)
+                LOGGER.warning(e.msg)
 
     def _keep(self, log):
         if self.modules_filter and log.module not in self.modules_filter:
@@ -106,9 +137,8 @@ class Parser(object):
 
     def _month_key(self, log):
         """Provides a key based on the month, this concept of key must be enforced"""
-        key = log.date()
-        key.day = 1
-        return key
+        date_key = log.date.date()
+        return date_key.replace(day=1)
 
     def _month_label_formater(self):
         return '%d %b %Y'

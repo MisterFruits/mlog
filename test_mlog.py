@@ -63,6 +63,10 @@ def test_parse_date():
     assert date.minute == 13
     assert date.second == 34
 
+def test_date_time():
+    date = datetime.date(2015, 12, 14)
+    assert date.replace(day=1) == datetime.date(2015, 12, 1)
+
 
 def test_vincent():
     cats = ['y1', 'y2', 'y3', 'y4']
@@ -96,9 +100,9 @@ def test_nvd3():
 def test_nvd3_stacked_area():
     chart = stackedAreaChart(name='stackedAreaChart', height=400, width=1000)
 
-    xdata = [100, 101, 102, 103, 104, 105, 106,]
-    ydata = [6, 11, 12, 7, 11, 10, 11]
-    ydata2 = [8, 20, 16, 12, 20, 28, 28]
+    xdata = [100, 101, 102, 103, 104, 105, 106, 110]
+    ydata = [6, 11, 12, 7, 11, 10, 11, 2]
+    ydata2 = [8, 20, 16, 12, 20, 28, 28, 6]
 
     extra_serie = {"tooltip": {"y_start": "There is ", "y_end": " min"}}
     chart.add_serie(name="Serie 1", y=ydata, x=xdata, extra=extra_serie)
