@@ -2,7 +2,7 @@ import mlog, random, math, time, datetime
 from nvd3 import stackedAreaChart, pieChart, multiBarChart
 import dateutil.parser
 
-def test_LogParser_parse():
+def test_LogParser_logs():
     test_case = ['2008-09-03 gra45 nc_app3 3.4.5',
                  '2014-12-29 toto4 nc_app2 6.5',
                  '2015-09-14 toto4 nc_app3 6.4.5']
@@ -27,13 +27,27 @@ def test_LogParser_parse():
     assert logs[2].version == '6.4.5'
 
 
-def test_LogParser_parse_date():
+def test_LogParser_logs_date():
     test_case = ['2008-09-03 gra45 nc_app3 3.4.5',
                  '2014-12-29 toto4 nc_app2 6.5',
                  '2015-09-14 toto4 nc_app3 6.4.5']
     parser = mlog.Parser(test_case, r'(?P<date>\S+) (?P<uid>\S+) (?P<module>\S+) (?P<version>\S+)')
     parser.date_format = True
     logs = list(parser.logs)
+    assert logs[0].date.year == 2008
+    assert logs[1].date.year == 2014
+    assert logs[2].date.year == 2015
+
+
+def test_LogParser_logs_ingnore_unexpected_format():
+    test_case = ['2008-09-03 gra45 nc_app3 3.4.5',
+                 '2014-12-29 toto4 nc_app2 6.5',
+                 'totoalaplage',
+                 '2015-09-14 toto4 nc_app3 6.4.5']
+    parser = mlog.Parser(test_case, r'(?P<date>\S+) (?P<uid>\S+) (?P<module>\S+) (?P<version>\S+)')
+    parser.date_format = True
+    logs = list(parser.logs)
+    assert len(logs) == 3
     assert logs[0].date.year == 2008
     assert logs[1].date.year == 2014
     assert logs[2].date.year == 2015

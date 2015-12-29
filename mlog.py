@@ -67,7 +67,6 @@ class Parser(object):
         for log in self.logs:
             uids.add(log.uid)
             modules[log.module].add(log.version)
-
         return modules, uids
 
     def _parse_line(self, line):
@@ -77,7 +76,6 @@ class Parser(object):
             date =  m.group('date')
             if self.date_format:
                 date = dateutil.parser.parse(date)
-
             return Log(m.group('module'), m.group('version'), date, hashlib.sha1(m.group('uid').encode()).hexdigest()[:5])
         else:
             raise SyntaxError(WRONG_FORMAT_WARNING.format(line, self.format.pattern))
@@ -107,7 +105,7 @@ class Parser(object):
         return self._month_key(log)
 
     def _month_key(self, log):
-        """Provides a key based on the month, this concept of  key must be enforced"""
+        """Provides a key based on the month, this concept of key must be enforced"""
         key = log.date()
         key.day = 1
         return key
