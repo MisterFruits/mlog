@@ -7,6 +7,7 @@ import re, logging, hashlib
 from collections import defaultdict
 
 WRONG_FORMAT_WARNING = "log '{}' does not match provided regex: '{}'"
+LOGGER = logging.getLogger(__name__)
 
 def main():
     # maybe add complex command line options such as mlog pie/stack
@@ -20,11 +21,11 @@ def main():
                         help='filter logs, dont consider logs before this date')
     parser.add_argument('-E', '--end-time',
                         help='filter logs, dont consider logs after this date')
-    parser.add_argument('-v', '--verbose', action='count',
+    parser.add_argument('-v', '--verbose', action='count', default=0,
                         help='verbose mode')
 
     args = parser.parse_args()
-    logging.setLevel([logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][args.verbose])
+    LOGGER.setLevel([logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][args.verbose])
 
     with open(args.logfile) as loglines:
         p = Parser(loglines, args.format)
@@ -93,7 +94,7 @@ class Parser(object):
                 if self._keep(log):
                     yield log
             except SyntaxError as e:
-                logging.warning(e.msg)
+                LOGGER.info(e.msg)
 
     def _keep(self, log):
         if self.modules_filter and log.module not in self.modules_filter:
