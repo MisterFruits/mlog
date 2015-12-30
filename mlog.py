@@ -3,23 +3,27 @@
 import nvd3
 import argparse
 import dateutil.parser, time
-import re, logging, hashlib
+import re, logging, hashlib, os.path
 from collections import defaultdict, Counter
 from pprint import pprint as pp
 from nvd3 import stackedAreaChart, pieChart, multiBarChart
+from slugify import slugify
 
 
 WRONG_FORMAT_WARNING = "log '{}' does not match provided regex: '{}'"
+DEFAULT_LOG_FORMAT_REGEX = r'(?P<module>\S*)/(?P<version>\S*)\s*;\s*(?P<date>\d{8} \d{2}:\d{2}:\d{2})\s*;\s*(?P<host>\S*)\s*;\s*(?P<uid>\S*)\s*;\s*$'
 LOGGER = logging.getLogger(__name__)
 
 def main():
     # maybe add complex command line options such as mlog pie/stack
     parser = argparse.ArgumentParser(description='Output stats on module logs')
     parser.add_argument('logfile', help='input log file')
-    parser.add_argument('-f', '--format', help='log format regex', default=r'(?P<module>.*)/(?P<version>.*) ; (?P<date>.*) ; (?P<host>.*) ; (?P<uid>.*) ;.*')
-    parser.add_argument('-d', '--date-format', help='hint on date parsing format')
+    parser.add_argument('-f', '--format', help='log format regex',
+                        default=DEFAULT_LOG_FORMAT_REGEX)
     parser.add_argument('-o', '--output-dir',
                         help='target dir where results will be generated')
+    parser.add_argument('-m', '--modules', action='append',
+                        help='filter logs, just consider given modules')
     parser.add_argument('-S', '--start-time',
                         help='filter logs, dont consider logs before this date')
     parser.add_argument('-E', '--end-time',
@@ -27,46 +31,43 @@ def main():
     parser.add_argument('-v', '--verbose', action='count', default=0,
                         help='verbose mode')
 
-    args = parser.parse_args()
+    with open("mlog.rc") as f:
+        args = parser.parse_args(f.read().split())
+    args = parser.parse_args(namespace = args)
     LOGGER.setLevel([logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][args.verbose])
 
     with open(args.logfile) as loglines:
         p = Parser(loglines, args.format)
         p.date_format = True
-        p.modules_filter.add('intel')
-        data = defaultdict(Counter)
+        p.modules_filter.update(args.modules)
+        datas_by_module = defaultdict(lambda: defaultdict(Counter))
         for log in p.logs:
             category = 'Module {}, version {}'.format(log.module, log.version)
-            data[category].update([p.key(log)])
-        stacked_chart(data)
+            datas_by_module[log.module][category].update([p.key(log)])
+        for module, datas in datas_by_module.items():
+            with open(os.path.join(args.output_dir, module + '.html'), 'w')) as file
+            stacked_chart(file, datas)
 
-def stacked_chart(datas):
+def stacked_chart(title, datas):
+    title = slugify(title)
     pp(datas)
-    x_values = set()
+    dates = set()
     for key in datas:
-        x_values.update(datas[key].keys())
-    pp(x_values)
-    xx_values = [int(time.mktime(date.timetuple()) * 1000) for date in x_values]
+        dates.update(datas[key].keys())
+    pp(dates)
+    xdates = sorted([int(time.mktime(date.timetuple()) * 1000) for date in dates])
 
-    type = "stackedAreaChart"
-
-    chart = stackedAreaChart(name=type, height=400, width=1000, x_is_date=True)
-    chart.set_containerheader("\n\n<h2>" + type + "</h2>\n\n")
-
-
-    tooltip_date = "%b %Y"
+    chart = stackedAreaChart(name=title, height=400, width=1000, x_is_date=True)
+    chart.set_containerheader("\n\n<h2>" + title + "</h2>\n\n")
 
     for category, data in datas.items():
-        extra_serie = {"tooltip": {"y_start": "There were ", "y_end": " {} moduel loaded".format(category)},
-                       "date_format": tooltip_date}
-        chart.add_serie(name=category, y=[data[key] for key in x_values], x=xx_values, extra=extra_serie)
+        chart.add_serie(name=category, y=[data[date] for date in dates], x=xdates)
 
     chart.buildhtml()
-
-    write(chart, "date_from_log")
+    write(chart, title)
 
 def write(chart, filename):
-     with open(filename + '.html', 'w') as output_file:
+     with open('out/' + filename + '.html', 'w') as output_file:
         output_file.write(chart.htmlcontent)
 
 class Log(object):

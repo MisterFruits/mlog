@@ -1,6 +1,7 @@
-import mlog, random, math, time, datetime
+import mlog, random, math, time, datetime, re
 from nvd3 import stackedAreaChart, pieChart, multiBarChart
 import dateutil.parser
+
 
 def test_LogParser_logs():
     test_case = ['2008-09-03 gra45 nc_app3 3.4.5',
@@ -82,6 +83,13 @@ def test_vincent():
 
     chart.buildhtml()
     write(chart, 'vincent')
+
+def test_log_format_regex():
+    no_match = "idb/composer_xe_2015.3.187 ; 20151103 03:56:17 ; occigen1881 ;espresso/5.intel/14.0.4.211 ; 20151103 03:56:17 ; occigen15intel/15.0.3.bullxmpi/1.2.8.4-mxm ; 20151103 03:56:17 ; occigenmkl/composer_xe_2015.3.187 ; 20151103 03:56:17 ; occigen1072 ; bullxmpi/bullxmpi/1.2.8.4 ; 20151103 03:56:17 ; occigen2113 ; ffeliidb/composer_xe_2015.3.187 ; 20151103 03:56:17 ; occigen1613 ; ffelis ;"
+    match = "idb/composer_xe_2015.3.187 ; 20151103 03:56:17 ; odeu123 ; espresso ; "
+    reg = re.compile(mlog.DEFAULT_LOG_FORMAT_REGEX)
+    assert not reg.match(no_match)
+    assert reg.match(match)
 
 def test_nvd3():
     type = 'pieChart'
