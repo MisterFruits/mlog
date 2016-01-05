@@ -20,7 +20,7 @@ def main():
     parser.add_argument('logfile', help='input log file')
     parser.add_argument('-f', '--format', help='log format regex',
                         default=DEFAULT_LOG_FORMAT_REGEX)
-    parser.add_argument('-o', '--output-dir',
+    parser.add_argument('-o', '--output-dir', default='.',
                         help='target dir where results will be generated')
     parser.add_argument('-m', '--modules', action='append',
                         help='filter logs, just consider given modules')
@@ -31,30 +31,42 @@ def main():
     parser.add_argument('-v', '--verbose', action='count', default=0,
                         help='verbose mode')
 
-    with open("mlog.rc") as f:
-        args = parser.parse_args(f.read().split())
-    args = parser.parse_args(namespace = args)
+    config_file_args = []
+    with open("mlog.rcc") as f:
+        config_file_args = f.read().split()
+    args = parser.parse_args()
     LOGGER.setLevel([logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][args.verbose])
 
     with open(args.logfile) as loglines:
         p = Parser(loglines, args.format)
         p.date_format = True
-        p.modules_filter.update(args.modules)
+        p.modules_filter.update(args.modules or config_file_args)
         datas_by_module = defaultdict(lambda: defaultdict(Counter))
         for log in p.logs:
             category = 'Module {}, version {}'.format(log.module, log.version)
             datas_by_module[log.module][category].update([p.key(log)])
+        if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
+        alll = {}
         for module, datas in datas_by_module.items():
-            with open(os.path.join(args.output_dir, module + '.html'), 'w')) as file
-            stacked_chart(file, datas)
+            chart = stacked_chart(module, datas)
+            chart.buildhtml()
+            alll.update(datas)
+
+            with open(os.path.join(args.output_dir, module + '.html'), 'w') as html_file:
+                html_file.write(chart.htmlcontent)
+
+        chart = stacked_chart("All modules", alll)
+        chart.buildhtml()
+        with open(os.path.join(args.output_dir, 'all.html'), 'w') as html_file:
+                html_file.write(chart.htmlcontent)
+
 
 def stacked_chart(title, datas):
     title = slugify(title)
-    pp(datas)
     dates = set()
     for key in datas:
         dates.update(datas[key].keys())
-    pp(dates)
     xdates = sorted([int(time.mktime(date.timetuple()) * 1000) for date in dates])
 
     chart = stackedAreaChart(name=title, height=400, width=1000, x_is_date=True)
@@ -63,12 +75,8 @@ def stacked_chart(title, datas):
     for category, data in datas.items():
         chart.add_serie(name=category, y=[data[date] for date in dates], x=xdates)
 
-    chart.buildhtml()
-    write(chart, title)
+    return chart
 
-def write(chart, filename):
-     with open('out/' + filename + '.html', 'w') as output_file:
-        output_file.write(chart.htmlcontent)
 
 class Log(object):
     """A line of log container"""
