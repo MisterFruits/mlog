@@ -32,7 +32,7 @@ def main():
                         help='verbose mode')
 
     config_file_args = []
-    with open("mlog.rcc") as f:
+    with open("mpi.rc") as f:
         config_file_args = f.read().split()
     args = parser.parse_args()
     LOGGER.setLevel([logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG][args.verbose])
